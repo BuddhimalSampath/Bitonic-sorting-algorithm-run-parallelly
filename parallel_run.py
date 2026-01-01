@@ -52,5 +52,16 @@ bitonic_sort_parallel(arr)
 # --------- REMOVE PADDING ----------
 sorted_numbers = arr[:original_len].tolist()
 
-print("Sorted Data:")
-print(sorted_numbers)
+
+# ---------- WRITE SORTED DATA TO NEW CSV ----------
+with open("sorted_dataset_parallel.csv", "w", newline="") as file:
+    writer = csv.writer(file)
+
+    # Write header (same as input)
+    writer.writerow(["values"])
+
+    # Write sorted integers
+    for value in sorted_numbers:
+        writer.writerow([value])
+
+print("Sorted dataset (parallely) written to sorted_dataset.csv")

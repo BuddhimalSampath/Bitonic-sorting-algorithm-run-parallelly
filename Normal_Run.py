@@ -42,7 +42,6 @@ with open("dataset.csv", "r") as file:
         if row:
             numbers.append(int(row[0]))
 
-print("Original Data:", numbers)
 
 # ---------- Pad to Power of 2 ----------
 
@@ -60,4 +59,17 @@ bitonic_sort(numbers, direction=1)
 # Remove padding
 sorted_numbers = numbers[:original_length]
 print("")
-print("Sorted Data:", sorted_numbers)
+
+
+# ---------- WRITE SORTED DATA TO NEW CSV ----------
+with open("sorted_dataset_serial.csv", "w", newline="") as file:
+    writer = csv.writer(file)
+
+    # Write header (same as input)
+    writer.writerow(["values"])
+
+    # Write sorted integers
+    for value in sorted_numbers:
+        writer.writerow([value])
+
+print("Sorted dataset (serially) written to sorted_dataset.csv")
