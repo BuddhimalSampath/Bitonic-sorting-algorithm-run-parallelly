@@ -134,7 +134,7 @@ def main():
     # Rank 0 loads the data
     if rank == 0:
         try:
-            df = pd.read_csv("dataset.csv")
+            df = pd.read_csv("dataset_long.csv")
             col = df.columns[0]
             data = df[col].values
             data, original_size = pad_to_power_of_two(data)
@@ -158,12 +158,23 @@ def main():
     # Run Sort
     sorted_data = parallel_bitonic_sort(data, comm)
     
+    # ... existing code ...
+
     comm.Barrier()
     end_time = MPI.Wtime()
 
-    # Root prints results in "CORES,TIME" format
+    # Root saves data and prints results
     if rank == 0:
-        # sorted_data = sorted_data[:original_size] # remove padding if you want to save
+        # 1. Remove the padding (restore original size)
+        final_sorted_data = sorted_data[:original_size]
+        
+        # 2. Save to CSV
+        # We use Pandas to write the file quickly
+        output_filename = "dataset_sorted.csv"
+        pd.DataFrame(final_sorted_data, columns=["SortedValues"]).to_csv(output_filename, index=False)
+        
+        # 3. Print the metric for the dashboard
+        # IMPORTANT: This must remain the LAST print statement so app.py can read it.
         print(f"{size},{end_time - start_time}")
 
 if __name__ == "__main__":
