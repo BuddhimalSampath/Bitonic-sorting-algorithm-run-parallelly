@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Parallel Sorting Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        p.subtitle { text-align: center; color: #666; margin-bottom: 40px; }
+        
+        .controls { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 30px; }
+        .controls label { background: #eef2ff; padding: 15px 25px; border-radius: 8px; cursor: pointer; border: 1px solid #c7d2fe; transition: 0.2s; }
+        .controls label:hover { background: #e0e7ff; }
+        
+        button { display: block; width: 200px; margin: 0 auto; padding: 15px; font-size: 18px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        button:hover { background: #1d4ed8; }
+        button:disabled { background: #93c5fd; cursor: wait; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+        th, td { padding: 12px; border-bottom: 1px solid #eee; text-align: center; }
+        th { background: #f8fafc; font-weight: 600; }
+        
+        .chart-container { margin-top: 40px; position: relative; height: 300px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Parallel Bitonic Sort Dashboard</h1>
+    <p class="subtitle">Comparing execution time across different CPU core counts</p>
+
+    <h3>Select Cores (Power of 2 Required)</h3>
+    <div class="controls">
+        <label><input type="checkbox" value="1"> 1 Core (Serial)</label>
+        <label><input type="checkbox" value="2"> 2 Cores</label>
+        <label><input type="checkbox" value="4"> 4 Cores</label>
+        <label><input type="checkbox" value="8"> 8 Cores</label>
+        <label><input type="checkbox" value="16"> 16 Cores</label>
+    </div>
+
+    <button onclick="run()" id="runBtn">Run Experiment</button>
+
+    <h3>Performance Metrics</h3>
+    <table id="resultTable">
+        <thead>
+            <tr>
+                <th>Cores</th>
+                <th>Execution Time (seconds)</th>
+                <th>Speedup (vs 1 core)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="3">No results yet.</td></tr>
+        </tbody>
+    </table>
+
+    <div class="chart-container">
+        <canvas id="chart"></canvas>
+    </div>
+</div>
+
+<script>
+let chartInstance = null;
+
+function run() {
+    const cores = [];
+    document.querySelectorAll("input[type=checkbox]:checked").forEach(cb => cores.push(parseInt(cb.value)));
+
+    if (cores.length === 0) { alert("Please select at least one core count."); return; }
+
+    const btn = document.getElementById("runBtn");
+    btn.disabled = true;
+    btn.innerText = "Running Simulations...";
+
+    fetch("/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cores: cores })
+    })
+    .then(res => res.json())
+    .then(data => {
+        renderResults(data);
+        btn.disabled = false;
+        btn.innerText = "Run Experiment";
+    })
+    .catch(err => {
+        alert("Error running experiment.");
+        console.error(err);
+        btn.disabled = false;
+        btn.innerText = "Run Experiment";
+    });
+}
+
+function renderResults(data) {
+    const tableBody = document.querySelector("#resultTable tbody");
+    tableBody.innerHTML = "";
+
+    // Sort data by core count for cleaner graph
+    data.sort((a, b) => a.cores - b.cores);
+
+    // Find base time (1 core) for speedup calculation
+    const baseRun = data.find(d => d.cores === 1);
+    const baseTime = baseRun ? baseRun.time : null;
+
+    const labels = [];
+    const times = [];
+
+    data.forEach(row => {
+        let speedup = "-";
+        if (baseTime) {
+            speedup = (baseTime / row.time).toFixed(2) + "x";
+        }
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td>${row.cores}</td><td>${row.time.toFixed(4)}</td><td>${speedup}</td>`;
+        tableBody.appendChild(tr);
+
+        labels.push(row.cores);
+        times.push(row.time);
+    });
+
+    // Chart.js
+    const ctx = document.getElementById("chart").getContext("2d");
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Execution Time (s)',
+                data: times,
+                borderColor: '#2563eb',
+                backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Time (Seconds)' } },
+                x: { title: { display: true, text: 'Number of Cores' } }
+            }
+        }
+    });
+}
+</script>
+
+</body>
+</html>
