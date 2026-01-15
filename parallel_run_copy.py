@@ -134,7 +134,7 @@ def main():
     # Rank 0 loads the data
     if rank == 0:
         try:
-            df = pd.read_csv("dataset_long.csv")
+            df = pd.read_csv("dataset_small.csv")
             col = df.columns[0]
             data = df[col].values
             data, original_size = pad_to_power_of_two(data)
